@@ -5,7 +5,7 @@ mp_drawing = mp.solutions.drawing_utils
 import time
 
 # For static images:
-IMAGE_FILES = []
+IMAGE_FILES = []#'C:\\Users\\user\\Desktop\\iman\\FaceMaskDetection-SocialDistancing\\Dataset\\FMD_DATASET\\test']
 with mp_face_detection.FaceDetection(
     model_selection=1, min_detection_confidence=0.5) as face_detection:
   for idx, file in enumerate(IMAGE_FILES):
@@ -22,6 +22,7 @@ with mp_face_detection.FaceDetection(
       print(mp_face_detection.get_key_point(
           detection, mp_face_detection.FaceKeyPoint.NOSE_TIP))
       mp_drawing.draw_detection(annotated_image, detection)
+      print(detection)
     cv2.imwrite('/tmp/annotated_image' + str(idx) + '.png', annotated_image)
 
 # For webcam input:
@@ -47,6 +48,7 @@ with mp_face_detection.FaceDetection(
     if results.detections:
       for detection in results.detections:
         mp_drawing.draw_detection(image, detection)
+        print(detection)
     # Flip the image horizontally for a selfie-view display.
     cv2.imshow('MediaPipe Face Detection', cv2.flip(image, 1))
     if cv2.waitKey(5) & 0xFF == 27:

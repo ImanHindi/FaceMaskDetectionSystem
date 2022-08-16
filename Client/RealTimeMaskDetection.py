@@ -6,13 +6,12 @@ import imutils
 import time
 import cv2
 import os
-from Client.MaskDetectionRequest import prediction_request
+from MaskDetectionRequest import prediction_request
 
 
-# initialize the video stream and allow the camera sensor to warm up
+# initialize the video stream and allow the camera sensor to warm upwdd
 print("[INFO] starting video stream...")
 vs = VideoStream(src=0).start()
-time.sleep(2.0)
 
 # loop over the frames from the video stream
 while True:
@@ -20,29 +19,33 @@ while True:
 	# to have a maximum width of 400 pixels
 	frame = vs.read()
 	frame = imutils.resize(frame, width=400)
-
+	#cv2.imshow("image",frame)
+	#cv2.waitKey()
+	#cv2.destroyAllWindows()
+	cv2.imwrite('imag.png',frame)
 	# detect faces in the frame and determine if they are wearing a
 	# face mask or not
-	(locs, preds) = prediction_request(frame)
+	(locs, preds) = prediction_request('imag.png')
 
 	# loop over the detected face locations and their corresponding
 	# locations
 	for (box, pred) in zip(locs, preds):
 		# unpack the bounding box and predictions
 		(startX, startY, endX, endY) = box
-		(mask, withoutMask,incorrect_Mask) = pred
-		if mask == 1:
-			label = "Mask"
-			color = (0, 255, 0)
-		elif withoutMask == 1:
-			label = "NoMask"
-			color = (0, 0, 255)
-		else:
+		#(mask,incorrect_Mask, withoutMask) = pred
+		#(incorrect_Mask,mask, withoutMask) = pred
+		if np.argmax(pred)==0: 
 			label = "incorrectMask"
 			color = (255, 0, 0)
+		elif np.argmax(pred)==1:
+			label = "Mask"
+			color = (0, 255, 0)
+		elif np.argmax(pred)==2:
+			label = "withoutMask"
+			color = (0, 0, 255)
 			
 		# include the probability in the label
-		label= "{}: {:.2f}%".format(label, max(mask, withoutMask,incorrect_Mask) * 100)
+		label= "{}: {:.2f}%".format(label, max(pred) * 100)
 
 		# display the label and bounding box rectangle on the output
 		# frame
