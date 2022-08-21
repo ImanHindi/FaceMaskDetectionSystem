@@ -37,21 +37,23 @@ def predict_mask():
     img_bytes = base64.b64decode(im_b64.encode('utf-8'))
     # convert bytes data to PIL Image object
     img = Image.open(io.BytesIO(img_bytes))
-    img_arr = np.asarray(img)      
+    img_arr = np.asarray(img)
+
     #file={'image': open(image,'rb')}
     #img=np.array(image.open(file.stream))
-    #print(image)
-    locs, preds = FaceMaskDetector.FaceMaskDetector.detect_and_predict_mask(img_arr)
+    #print(img_arr)
+    locs, preds,preds_actual = FaceMaskDetector.FaceMaskDetector.detect_and_predict_mask(img_arr)
     #print(locs)
     #print(preds)
     
     result = {
         'locs': locs,
-
-        'preds': preds
+        'preds': preds,
+        'preds_actual':preds_actual
     }
     return result
 
 
+
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    app.run(debug=True, host='127.0.0.1', port=5000)

@@ -45,9 +45,10 @@ class FaceMaskDetector():
 	def detect_and_predict_mask(frame, faceNet=faceNet, maskNet=maskNet):
 		faces = []
 		locs = []
-		preds = []  
+		preds = [] 
+		preds_actual=[] 
 		with faceNet.FaceDetection(
-	    	model_selection=1, min_detection_confidence=0.6) as face_detection:
+	    	model_selection=1, min_detection_confidence=0.5) as face_detection:
 			#print(frame)
 			#cv2.imshow("frame",frame)
 			#cv2.waitKey()
@@ -68,59 +69,74 @@ class FaceMaskDetector():
 			#	cv2.imwrite('/annotated_image' + str(detection) + '.png', annotated_image)
 	
 			# loop over the detections
-			for detection in results.detections:
-				#print(detection.location_data.relative_bounding_box)
-				coordinates=detection.location_data.relative_bounding_box
-				#print(detection["location_data"]["relative_bounding_box "])
-				#print(detection.values)
-				#box = results.detections[0, 0, i, 3:7] * np.array([w, h, w, h])
-				(startX, startY, endX, endY) = int(coordinates.xmin*w-5),int(coordinates.ymin*h-5),int((coordinates.width+coordinates.xmin)*w+5),int((coordinates.height+coordinates.ymin)*h+5)#.location_data.relative_bounding_box
-				# ensure the bounding boxes fall within the dimensions of
-				# the frame
-				#print(startX, startY, endX, endY)
-				(startX, startY) = (max(0, startX), max(0, startY))
-				(endX, endY) = (min(w - 1, endX), min(h - 1, endY))
-				#print(startX, startY, endX, endY)
-	
-				# extract the face ROI, convert it from BGR to RGB channel
-				# ordering, resize it to 224x224, and preprocess it
-				face = frame[startY:endY, startX:endX]
-				#cv2.imshow("face",face)
-				#cv2.waitKey()
-				#cv2.destroyAllWindows()
-				if face.any():
-					face = cv2.cvtColor(face, cv2.COLOR_BGR2RGB)
+			if results.detections:
+				for detection in results.detections:
+					#print(detection.location_data.relative_bounding_box)
+					coordinates=detection.location_data.relative_bounding_box
+					#print(detection["location_data"]["relative_bounding_box "])
+					#print(detection.values)
+					#box = results.detections[0, 0, i, 3:7] * np.array([w, h, w, h])
+					(startX, startY, endX, endY) = int(coordinates.xmin*w-5),int(coordinates.ymin*h-5),int((coordinates.width+coordinates.xmin)*w+5),int((coordinates.height+coordinates.ymin)*h+5)#.location_data.relative_bounding_box
+					# ensure the bounding boxes fall within the dimensions of
+					# the frame
+					#print(startX, startY, endX, endY)
+					(startX, startY) = (max(0, startX), max(0, startY))
+					(endX, endY) = (min(w - 1, endX), min(h - 1, endY))
+					#print(startX, startY, endX, endY)
+
+					# extract the face ROI, convert it from BGR to RGB channel
+					# ordering, resize it to 224x224, and preprocess it
+					face = frame[startY:endY, startX:endX]
 					#cv2.imshow("face",face)
 					#cv2.waitKey()
 					#cv2.destroyAllWindows()
-					face = cv2.resize(face, (224, 224))
-					face = image_utils.img_to_array(face)
-					face = preprocess_input(face)
-					face = np.expand_dims(face, axis=0)
-	
-					# add the face and bounding boxes to their respective
-					# lists
-					faces.append(face)
-					locs.append((startX, startY, endX, endY))
-				# only make a predictions if at least one face was detected
-			#if len(faces) > 0:
-				# for faster inference we'll make batch predictions on *all*
-				# faces at the same time rather than one-by-one predictions
-				# in the above `for` loop
-				#faces = np.array(faces, dtype="float32")
-				pred = maskNet.predict(face).tolist()[0]
-				#(incorrect_Mask,mask, withoutMask)
-				#if prediction.argmax()==0:
-				#	pred="mask"
-				#elif prediction.argmax()==1:
-				#	pred="withoutMask"
-				#elif prediction.argmax()==2:
-				#	pred="incorrect_Mask"
-				#print(pred)
-				preds.append(pred)
-				#print("detector",locs,preds)
-				
-		return (locs, preds)
+					if face.any():
+						face = cv2.cvtColor(face, cv2.COLOR_BGR2RGB)
+						#cv2.imshow("face",face)
+						#cv2.waitKey()
+						#cv2.destroyAllWindows()
+						face = cv2.resize(face, (224, 224))
+						face = image_utils.img_to_array(face)
+						face = preprocess_input(face)
+						face = np.expand_dims(face, axis=0)
+
+						# add the face and bounding boxes to their respective
+						# lists
+						faces.append(face)
+						locs.append((startX, startY, endX, endY))
+					# only make a predictions if at least one face was detected
+					#if len(faces) > 0:
+						# for faster inference we'll make batch predictions on *all*
+						# faces at the same time rather than one-by-one predictions
+						# in the above `for` loop
+						#faces = np.array(faces, dtype="float32")
+						pred = maskNet.predict(face).tolist()[0]
+						#(incorrect_Mask,mask, withoutMask)
+						#if prediction.argmax()==0:
+						#	pred="mask"
+						#elif prediction.argmax()==1:
+						#	pred="withoutMask"
+						#elif prediction.argmax()==2:
+						#	pred="incorrect_Mask"
+						#print(pred)
+					
+						pred_actual=np.argmax(pred)
+						if pred_actual==0:
+							mask="incorrect Mask"
+						elif pred_actual==1:
+							mask="Mask"
+						elif pred_actual==2:
+							mask="No Mask" 
+						else:
+							mask=""
+						preds_actual.append(mask)
+						preds.append(pred)
+						#print("detector",locs,preds)
+			#else:
+			#	preds=[0,0,0]
+			#	locs=[0,0,0]
+
+		return (locs, preds,preds_actual)
 	#im=cv2.imread("C:\\Users\\user\\Desktop\\iman\\English\\lightness1.jpg")
 	##im=cv2.resize(im,(500,500))
 	#cv2.imshow("im",im)

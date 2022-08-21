@@ -230,7 +230,7 @@ model.save(args["model"])
 # show a nicely formatted classification report
 print(classification_report(testY.argmax(axis=1), prediction,
 	target_names=lb.classes_))
-print(confusion_matrix(testY.argmax(axis=1),prediction,target_names=lb.classes_))
+print(confusion_matrix(testY.argmax(axis=1),prediction,labels=lb.classes_))
 
 x=np.arange(0, epochs)
 plt.style.use("ggplot")

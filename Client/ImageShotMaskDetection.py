@@ -34,31 +34,35 @@ def mask_image():
 	#(list(json.dumps(response['locs'])),list(json.dumps(response['preds'])))
 # loop over the detected face locations and their corresponding
 	# locations
-	for (box, pred) in zip(locs, preds):
-		# unpack the bounding box and predictions
-		(startX, startY, endX, endY) = box
-		
-		print(pred)
-		#(incorrect_Mask,mask, withoutMask) = pred
-		if np.argmax(pred)==0: 
-			label = "incorrectMask"
-			color = (255, 0, 0)
-		elif np.argmax(pred)==1:
-			label = "Mask"
-			color = (0, 255, 0)
-		elif np.argmax(pred)==2:
-			label = "withoutMask"
-			color = (0, 0, 255)
-			
-		# include the probability in the label
-		label= "{}: {:.2f}%".format(label, max(pred) * 100)
+	if (locs, preds):
+		for (box, pred) in zip(locs, preds):
+			# unpack the bounding box and predictions
+			(startX, startY, endX, endY) = box
 
-			
-		# display the label and bounding box rectangle on the output
-		# frame
-		cv2.putText(image, label, (startX, startY - 10),
-			cv2.FONT_HERSHEY_SIMPLEX, 0.45, color, 2)
-		cv2.rectangle(image, (startX, startY), (endX, endY), color, 2)
+			print(pred)
+			#(incorrect_Mask,mask, withoutMask) = pred
+			if np.argmax(pred)==0: 
+				label = "incorrectMask"
+				color = (255, 0, 0)
+			elif np.argmax(pred)==1:
+				label = "Mask"
+				color = (0, 255, 0)
+			elif np.argmax(pred)==2:
+				label = "withoutMask"
+				color = (0, 0, 255)
+			else: 
+				label = ""
+				color = (0, 0, 0)
+
+			# include the probability in the label
+			label= "{}: {:.2f}%".format(label, max(pred) * 100)
+
+
+			# display the label and bounding box rectangle on the output
+			# frame
+			cv2.putText(image, label, (startX, startY - 10),
+				cv2.FONT_HERSHEY_SIMPLEX, 0.45, color, 2)
+			cv2.rectangle(image, (startX, startY), (endX, endY), color, 2)
 
 	# show the output image
 	cv2.imshow("Output", image)

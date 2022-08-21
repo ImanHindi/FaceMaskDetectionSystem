@@ -1,10 +1,16 @@
 from datetime import time
 import datetime
 from email.mime import image
+from enum import unique
 from json import load,dump
+from threading import Thread
 from time import sleep
+from tkinter import Frame
+from unittest import result
+from weakref import ref
 import requests
 import cv2
+from itertools import count
 #from APIs.SQLiteAPI import LocalDataBase
 import pandas as pd
 import numpy as np
@@ -13,72 +19,161 @@ from keras.preprocessing.image import image_utils
 import json   
 import requests
 import base64
-def prediction_request(frame):
 
-    #Web Service Prediction:
+
+def prepare_data_for_firebase(data,pred_datetime):
     
-    url ="http://localhost:5000/PredictMask"
-    #cv2.imshow("image_shot",frame)
-    #cv2.waitKey()
-    #cv2.destroyAllWindows()  
-    #im_bytes = bytearray(frame)
-    with open(frame, "rb") as f:
-        im_bytes = f.read()        
-    im_b64 = base64.b64encode(im_bytes).decode("utf8")    
-    json_im = json.dumps({'image': im_b64})
-    headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
+    ref={
+        "master":"/MaskDetectionReport",
+        "year":"/year/"+str(pred_datetime.year),
+        "month":"/month/"+str(pred_datetime.month),
+        "day":"/day/"+str(pred_datetime.day),
+        "hour":"/hour/"+str(pred_datetime.hour),
+        "minute":"/minute/"+str(pred_datetime.minute),
+        "second":"/second/"+str(pred_datetime.second)
+    }
+    json_dic={
+        "facelocation":data['locs'],
+        "prediction":data['preds'],
+        "maskdetection":data['preds_actual']
+    }
+    return ref,json_dic
 
-    response = requests.post(url, data=json_im,headers=headers)
-    #print (response)
-    data = response.json()
-        #(locs,preds) = requests.post(url, json={'image':  str(image_shot)})
+def firebase_task(data,pred_datetime):
+    url ="http://localhost:5001/InsertData"
+    print("threadtask",data)
+    if data['locs'] and data['preds']:
+        ref,json_dic=prepare_data_for_firebase(data,pred_datetime)
         
-        #pred_datetime=datetime.datetime.now()
-        #year=pred_datetime.year
-        #month=pred_datetime.month
-        #day=pred_datetime.day
-        #hour=pred_datetime.hour
-        #minute=pred_datetime.minute
-        #
-        #json_dic={
-        #"db":"MaskDetection.db",
-        #"TableName":"MaskDetectionOutput.db",
-        #"CoLoums":"ID,Date,Time,pred",
-        #}
-        #url ="http://localhost:5000/localdb/CreateTable"
-        #res=requests.post(url,json=json_dic)
-        #
-        #json_dic={
-        #"db":"MaskDetection.db",
-        #"TableName":"MaskDetectionOutput.db",
-        #"CoLoums":"ID,Date,Time,pred",
-        #"Values": str(year)+str(month)+str(day)+str(hour)+str(minute)+str(locs)+str(preds)
-        #}
-        #
-        #url ="http://localhost:5000/localdb/InsertData"
-        #res=requests.post(url,json=json_dic)
-        #json_dic={
-        #    "year": year, 
-        #    "month":month,
-        #    "day":day,
-        #    "hour":hour,
-        #    "minute":minute,
-        #    "facelocation":locs,
-        #    "prediction":preds
-        #}
-        #url ="http://localhost:5000/InsertData"
-        #res=requests.post(url,json=json_dic)
-        #location=response.text['locs']
-        #predictions=response.text['preds']      
+        json_dic=json.dumps({'json_dic':json_dic,'ref':ref})
+        headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
+    
+        res=requests.post(url,data=json_dic,headers=headers)
+        print(res)  
+    
+def SQlite3_task(data,pred_datetime):
+        json_dic={
+        "db":"MaskDetection",
+        "TableName":"MaskDetectionOutput",
+        "Columns":"ID INTEGER PRIMARY KEY AUTOINCREMENT ,year varchar(255) ,month varchar(255),day varchar(255),hour varchar(255),minute varchar(255) ,second varchar(255),locations BLOB,predictions BLOB,maskdetection BLOB",
+        }
+        url ="http://localhost:5002/CreateTable"
+        #json_dic=json.dumps({'json_dic':json_dic})
+        headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
         
-    return data['locs'],data['preds']
+        res=requests.post(url,json=json_dic,headers=headers)
+        print(res)
+        if data['locs'] and data['preds']:    
+            json_dic={
+            "db":"MaskDetection",
+            "TableName":"MaskDetectionOutput",
+            "Columns":"year ,month ,day ,hour ,minute  ,second ,locations ,predictions,maskdetection ",
+            "Values": {
+                       "year": pred_datetime.year,
+                      "month":pred_datetime.month,
+                      "day":pred_datetime.day,
+                      "hour":pred_datetime.hour,
+                      "minute":pred_datetime.minute,
+                      "second":pred_datetime.second,
+                      "locations":data['locs'],
+                      "predictions":data['preds'],
+                      "maskdetection":data['preds_actual']
+            }
+            }
+
+            url ="http://localhost:5002/InsertData"
+            #json_dic=json.dumps({'json_dic':json_dic})
+            headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
+            res=requests.post(url,json=json_dic,headers=headers)
+            print(res)
 
 
-        ##output: '{"MaskPrediction":['WithMask','WithOutMask','IncorrectMask']}'    
 
 
 
-#data=local_database.get_data()
-#df=pd.DataFrame(data)
-#print(df)
-#df.to_csv("Report.csv")
+
+def prediction_request(frame):
+    #Web Service Prediction:
+    url ="http://127.0.0.1:5000/PredictMask"
+    try:
+        with open(frame, "rb") as f:
+            im_bytes = f.read()        
+        im_b64 = base64.b64encode(im_bytes).decode("utf8")    
+        json_im = json.dumps({'image': im_b64})
+        headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
+
+        response = requests.post(url, data=json_im,headers=headers)
+        #print (response)
+        data = response.json()
+        print(data)
+        #firebase_task(data)
+        #SQlite3_task(data)
+        
+        pred_datetime=datetime.datetime.now()
+        global firebase_thread
+        global SQlite3_thread
+        firebase_thread= Thread(target=firebase_task,args=(data,pred_datetime))
+        SQlite3_thread= Thread(target=SQlite3_task,args=(data,pred_datetime))
+        firebase_thread.start()
+        SQlite3_thread.start()
+        
+        return data['locs'],data['preds'],data['preds_actual']
+
+    except:
+        return response.text
+        
+        
+
+   
+def get_report_request_from_firebase():
+    
+    pred_datetime=datetime.datetime.now()
+    try:
+        firebase_thread.join()
+        ref={
+            "master":"/MaskDetectionReport",
+            "year":"/year/"+str(pred_datetime.year),
+            "month":"/month/"+str(pred_datetime.month),
+            "day":"/day/"+str(pred_datetime.day),
+        }
+        json_dic=json.dumps({'ref':ref})          
+        headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
+
+        url ="http://localhost:5001/GetbyDate"
+        response = requests.get(url, data=json_dic,headers=headers)
+        response=json.loads(response.text)
+        print(response,"this is request report response")
+        return response
+        
+    except:
+        return "error on report"
+def get_report_request_from_localdb():
+    try:
+        pred_datetime=datetime.datetime.now()
+
+        json_dic={
+            "db":"MaskDetection",
+            "TableName":"MaskDetectionOutput",
+            "Columns":{"year": "year",
+                      "month":"month" ,
+                      "day": "day"},
+            "Values": {
+                       "year": pred_datetime.year,
+                      "month":pred_datetime.month,
+                      "day":pred_datetime.day,
+
+            }
+            }
+        SQlite3_thread.join()
+        url ="http://localhost:5002/GetbyDate"
+        headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
+        response = requests.get(url, json=json_dic,headers=headers)
+        print("response in detection request",response)
+        response=json.loads(response.text)
+        return response
+    except:
+        return "error on report"
+
+
+
+
