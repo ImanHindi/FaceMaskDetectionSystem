@@ -42,7 +42,7 @@ def prepare_data_for_firebase(data,pred_datetime):
 def firebase_task(data,pred_datetime):
     url ="http://localhost:5001/InsertData"
     print("threadtask",data)
-    if data['locs'] and data['preds']:
+    if data['locs'] != [] :
         ref,json_dic=prepare_data_for_firebase(data,pred_datetime)
         
         json_dic=json.dumps({'json_dic':json_dic,'ref':ref})
@@ -110,6 +110,12 @@ def prediction_request(frame):
         #SQlite3_task(data)
         
         pred_datetime=datetime.datetime.now()
+        if pred_datetime.hour==None:
+            pred_datetime.hour=0
+        if pred_datetime.minute==None:
+            pred_datetime.minute=0
+        if pred_datetime.second==None:
+            pred_datetime.second=0
         global firebase_thread
         global SQlite3_thread
         firebase_thread= Thread(target=firebase_task,args=(data,pred_datetime))
@@ -128,6 +134,7 @@ def prediction_request(frame):
 def get_report_request_from_firebase():
     
     pred_datetime=datetime.datetime.now()
+    
     try:
         firebase_thread.join()
         ref={

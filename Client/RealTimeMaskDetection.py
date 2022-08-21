@@ -96,24 +96,37 @@ while True:
 
 # do a bit of cleanup
 cv2.destroyAllWindows()
-#cap.stop()
 date_time=datetime.datetime.now()
 report=get_report_request_from_firebase()
 print(report['result'],'realtime')
 
 if report['result']:
 	
-	df=pd.json_normalize(report['result'],record_path="second",meta=[['hour','minute','second']])
-	#df=df[0].str.split('.', expand=True)
-	#df=df.explode(df.columns[0]).reset_index(drop=True)
-	#data = list(map(flatten_dict, report['result']))
-	#df = pd.DataFrame(data)
-	#report=json.loads(report["result"])
+	df=pd.json_normalize(report['result'],meta=['facelocation','maskdetection','prediction',['hour','minute','second']],meta_prefix="output",record_prefix="Date")
+	x=df.columns
+	df=df.transpose()
+	df["date"]=x
+	print(df[0])
+	df2=df.explode(["date"],ignore_index=True).reset_index(drop=True)
+	print(df2)
+	out=df2['date'].str.split('.',expand=True)	
+	out['time']=out[1]+"."+out[3]+"."+out[5]
+	out['pred']=out[6]
+	out.drop([0,1,2,3,4,5,6], axis=1,inplace=True)
+	print(out)
+	out["output"]=df2[0].values
+	out=out.explode(["output"],ignore_index=True).reset_index(drop=True)
+	print(out)
+	try:
+		out=out.pivot(index='time',columns='pred',values='output')
+		print(out)
+	except:
+		pass
 else:
 	report=get_report_request_from_localdb()
 	df=pd.DataFrame(report['result'])
-print(df)
+#print(df)
 date_time=datetime.datetime.now()
-df.to_csv(f"Report'{date_time.date()}'.csv")
+out.to_csv(f"Report'{date_time.date()}'.csv")
 pd.read_csv(f"Report'{date_time.date()}'.csv")
 
