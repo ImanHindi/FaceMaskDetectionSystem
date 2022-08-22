@@ -3,9 +3,12 @@ import datetime
 from email.mime import image
 from enum import unique
 from json import load,dump
+from pickle import EMPTY_LIST
+from queue import Empty
 from threading import Thread
 from time import sleep
 from tkinter import Frame
+import traceback
 from unittest import result
 from weakref import ref
 import requests
@@ -19,6 +22,7 @@ from keras.preprocessing.image import image_utils
 import json   
 import requests
 import base64
+
 
 
 def prepare_data_for_firebase(data,pred_datetime):
@@ -40,9 +44,11 @@ def prepare_data_for_firebase(data,pred_datetime):
     return ref,json_dic
 
 def firebase_task(data,pred_datetime):
+    
     url ="http://localhost:5001/InsertData"
     print("threadtask",data)
-    if data['locs'] != [] :
+    if any(data.values()):
+        print("nullpart",data['locs'])
         ref,json_dic=prepare_data_for_firebase(data,pred_datetime)
         
         json_dic=json.dumps({'json_dic':json_dic,'ref':ref})
@@ -52,6 +58,7 @@ def firebase_task(data,pred_datetime):
         print(res)  
     
 def SQlite3_task(data,pred_datetime):
+    if any(data.values()):
         json_dic={
         "db":"MaskDetection",
         "TableName":"MaskDetectionOutput",
@@ -118,6 +125,7 @@ def prediction_request(frame):
             pred_datetime.second=0
         global firebase_thread
         global SQlite3_thread
+        
         firebase_thread= Thread(target=firebase_task,args=(data,pred_datetime))
         SQlite3_thread= Thread(target=SQlite3_task,args=(data,pred_datetime))
         firebase_thread.start()
@@ -126,8 +134,8 @@ def prediction_request(frame):
         return data['locs'],data['preds'],data['preds_actual']
 
     except:
-        return response.text
-        
+        print( "check connection to the server and try again..")
+        return 
         
 
    
@@ -150,10 +158,11 @@ def get_report_request_from_firebase():
         response = requests.get(url, data=json_dic,headers=headers)
         response=json.loads(response.text)
         print(response,"this is request report response")
-        return response
-        
     except:
-        return "error on report"
+        print("cannot retreive the report... check internet connection and try again.")
+        response=json.loads({'result':0})
+    return response
+
 def get_report_request_from_localdb():
     try:
         pred_datetime=datetime.datetime.now()
@@ -175,11 +184,16 @@ def get_report_request_from_localdb():
         url ="http://localhost:5002/GetbyDate"
         headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
         response = requests.get(url, json=json_dic,headers=headers)
-        print("response in detection request",response)
+        print("response from local db in detection request",response)
+        
+        print(response.text['result'])
         response=json.loads(response.text)
-        return response
+        
     except:
-        return "error on report"
+        traceback.print_exc()
+        print("retreiving report.... please keep connection on...")
+        response=json.loads({'result':0})
+    return response
 
 
 

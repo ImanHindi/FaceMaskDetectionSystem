@@ -53,7 +53,7 @@ class FirebaseDataBase:
             #res=root.set(data['year']['month']['day']['hour']['minute']['second'])
             return res
         except:
-            traceback.print_exc()
+            #traceback.print_exc()
             return "checking internet connection..."
 
     def get_data(self, ref):
@@ -62,7 +62,7 @@ class FirebaseDataBase:
                 data=root.get()
                 return data
             except:
-                traceback.print_exc()
+                #traceback.print_exc()
                 return "checking internet connection..."
 
     def get_data_by_Date(self, ref):    
@@ -74,8 +74,9 @@ class FirebaseDataBase:
                 result=json.dumps({"result":data})
                 return result
             except:
-                traceback.print_exc()
-                return traceback.print_exc()
+                #traceback.print_exc()
+                #return traceback.print_exc()
+                print("no connection to retreive the data.")
 
     def Delete_by_Date(self, ref):    
                 root = db.reference(ref)
@@ -83,7 +84,7 @@ class FirebaseDataBase:
                     res=root.delete()
                     return res
                 except:
-                    traceback.print_exc()
+                   # traceback.print_exc()
                     "checking internet connection..."
 
     
@@ -91,7 +92,7 @@ class FirebaseDataBase:
         try:
             return firebase_admin.delete_app()
         except:
-          traceback.print_exc()
+          #traceback.print_exc()
           return "checking internet connection..."
   
 
@@ -136,21 +137,21 @@ def Delete():
 #Insert new item to DB
 @app.route('/InsertData',methods=['POST','GET'])
 def InsertData():
-    
-        print("InsertData")
-        conn=FirebaseDataBase()
-        #ref=request.args.get('ref')
-        ref =request.json['ref']
-        print('ref',request.json['ref'])
-        data=request.json['json_dic']
-        print("firebasepart",data)
-        #data=json.dumps(data) 
-        while not q.empty():
-            queued_data=json.dumps(q.get())
-            res=conn.insert_data(ref,queued_data) 
-        #thread1= Thread(target=task,args=(data,ref))
-        #thread1.start()
-        try:  
+        try: 
+            print("InsertData")
+            conn=FirebaseDataBase()
+            #ref=request.args.get('ref')
+            ref =request.json['ref']
+            print('ref',request.json['ref'])
+            data=request.json['json_dic']
+            print("firebasepart",data)
+            #data=json.dumps(data) 
+            while not q.empty():
+                queued_data=json.dumps(q.get())
+                res=conn.insert_data(ref,queued_data) 
+            #thread1= Thread(target=task,args=(data,ref))
+            #thread1.start()
+
             res=conn.insert_data(ref,data) 
             print( "successfully inserted")
             conn.close_connection()
@@ -195,7 +196,7 @@ if __name__ == '__main__':
         event = Event()
 
     except:
-        traceback.print_exc()
+        print("checking server connection...")
         
 
 #'https://face-mask-detection-2778f-default-rtdb.firebaseio.com/' 

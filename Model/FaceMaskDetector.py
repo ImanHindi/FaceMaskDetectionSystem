@@ -37,7 +37,7 @@ class FaceMaskDetector():
 	# load the face mask detector model from disk
 	print("[INFO] loading face mask detector model...")
 	#maskNet = load_model(args["model"])
-	maskNet = load_model('C:\\Users\\user\\Desktop\iman\\FinalProject\\Model\\VGG19_FaceMaskDetector.hdf')
+	maskNet = load_model('C:\\Users\\user\\Desktop\\iman\\FaceMaskDetection-SocialDistancing\\Model\\VGG19_FaceMaskDetector.hdf')
 	#maskNet = load_model('C:\\Users\\user\\Desktop\\iman\\Face-Mask-Detection\\mask_detector.model')
 	
 	
