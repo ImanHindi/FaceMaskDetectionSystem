@@ -25,16 +25,19 @@ import base64
 
 
 
-def prepare_data_for_firebase(data,pred_datetime):
+def prepare_data_for_firebase(data,pred_datetime,source):
     
+    master="/RealTimeMaskDetectionReport"
+    if source==1:
+        master="/ArchiveImagesMaskDetectionReport"
     ref={
-        "master":"/MaskDetectionReport",
+        "master":master,
         "year":"/year/"+str(pred_datetime.year),
         "month":"/month/"+str(pred_datetime.month),
         "day":"/day/"+str(pred_datetime.day),
         "hour":"/hour/"+str(pred_datetime.hour),
         "minute":"/minute/"+str(pred_datetime.minute),
-        "second":"/second/"+str(pred_datetime.second)
+        "second":"/second/"+str(pred_datetime.second)+"/"
     }
     json_dic={
         "facelocation":data['locs'],
@@ -43,37 +46,40 @@ def prepare_data_for_firebase(data,pred_datetime):
     }
     return ref,json_dic
 
-def firebase_task(data,pred_datetime):
+def firebase_task(data,pred_datetime,source):
     
-    url ="http://localhost:5001/InsertData"
+    
     print("threadtask",data)
     if any(data.values()):
         print("nullpart",data['locs'])
-        ref,json_dic=prepare_data_for_firebase(data,pred_datetime)
+        ref,json_dic=prepare_data_for_firebase(data,pred_datetime,source)
         
         json_dic=json.dumps({'json_dic':json_dic,'ref':ref})
         headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
-    
+        url ="http://localhost:5001/InsertData"
         res=requests.post(url,data=json_dic,headers=headers)
         print(res)  
-    
-def SQlite3_task(data,pred_datetime):
-    if any(data.values()):
-        json_dic={
+
+def prepare_table_for_SQlite3(source): 
+    table_name="RealTimeMaskDetection"
+    if source==1:
+        table_name="ArchiveImagesMaskDetection"
+    json_dic={
         "db":"MaskDetection",
-        "TableName":"MaskDetectionOutput",
+        "TableName":table_name,
         "Columns":"ID INTEGER PRIMARY KEY AUTOINCREMENT ,year varchar(255) ,month varchar(255),day varchar(255),hour varchar(255),minute varchar(255) ,second varchar(255),locations BLOB,predictions BLOB,maskdetection BLOB",
         }
-        url ="http://localhost:5002/CreateTable"
-        #json_dic=json.dumps({'json_dic':json_dic})
-        headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
-        
-        res=requests.post(url,json=json_dic,headers=headers)
-        print(res)
-        if data['locs'] and data['preds']:    
-            json_dic={
+    return json_dic
+
+def prepare_data_for_SQlite3(data,pred_datetime,source):
+    
+    table_name="RealTimeMaskDetection"
+    if source==1:
+        table_name="ArchiveImagesMaskDetection"
+
+    json_dic={
             "db":"MaskDetection",
-            "TableName":"MaskDetectionOutput",
+            "TableName":table_name,
             "Columns":"year ,month ,day ,hour ,minute  ,second ,locations ,predictions,maskdetection ",
             "Values": {
                        "year": pred_datetime.year,
@@ -87,7 +93,21 @@ def SQlite3_task(data,pred_datetime):
                       "maskdetection":data['preds_actual']
             }
             }
+    return json_dic
 
+def SQlite3_task(data,pred_datetime,source):
+    if any(data.values()):
+        
+        url ="http://localhost:5002/CreateTable"
+        #json_dic=json.dumps({'json_dic':json_dic})
+        headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
+        json_dic=prepare_table_for_SQlite3(source)
+        
+        res=requests.post(url,json=json_dic,headers=headers)
+        print(res)
+        
+        if res:
+            json_dic=prepare_data_for_SQlite3(data,pred_datetime,source)    
             url ="http://localhost:5002/InsertData"
             #json_dic=json.dumps({'json_dic':json_dic})
             headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
@@ -99,7 +119,7 @@ def SQlite3_task(data,pred_datetime):
 
 
 
-def prediction_request(frame):
+def prediction_request(frame,source=0):
     #Web Service Prediction:
     url ="http://127.0.0.1:5000/PredictMask"
     try:
@@ -117,17 +137,12 @@ def prediction_request(frame):
         #SQlite3_task(data)
         
         pred_datetime=datetime.datetime.now()
-        if pred_datetime.hour==None:
-            pred_datetime.hour=0
-        if pred_datetime.minute==None:
-            pred_datetime.minute=0
-        if pred_datetime.second==None:
-            pred_datetime.second=0
+        
         global firebase_thread
         global SQlite3_thread
         
-        firebase_thread= Thread(target=firebase_task,args=(data,pred_datetime))
-        SQlite3_thread= Thread(target=SQlite3_task,args=(data,pred_datetime))
+        firebase_thread= Thread(target=firebase_task,args=(data,pred_datetime,source))
+        SQlite3_thread= Thread(target=SQlite3_task,args=(data,pred_datetime,source))
         firebase_thread.start()
         SQlite3_thread.start()
         
@@ -136,24 +151,26 @@ def prediction_request(frame):
     except:
         print( "check connection to the server and try again..")
         return 
-        
-
-   
-def get_report_request_from_firebase():
-    
+def prepare_ref_to_get_firebase_report(source):      
     pred_datetime=datetime.datetime.now()
-    
-    try:
-        firebase_thread.join()
-        ref={
-            "master":"/MaskDetectionReport",
+    master="/RealTimeMaskDetectionReport"
+    if source==1:
+        master="/ArchiveImagesMaskDetectionReport"
+    ref={
+            "master":master,
             "year":"/year/"+str(pred_datetime.year),
             "month":"/month/"+str(pred_datetime.month),
             "day":"/day/"+str(pred_datetime.day),
         }
+    return ref
+def get_report_request_from_firebase(source=0):
+    firebase_thread.join()
+    
+    try:
+        
+        ref=prepare_ref_to_get_firebase_report(source)
         json_dic=json.dumps({'ref':ref})          
         headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
-
         url ="http://localhost:5001/GetbyDate"
         response = requests.get(url, data=json_dic,headers=headers)
         response=json.loads(response.text)
@@ -162,25 +179,31 @@ def get_report_request_from_firebase():
         print("cannot retreive the report... check internet connection and try again.")
         response=json.loads({'result':0})
     return response
+def prepare_ref_to_get_localdb_report(source):
+    pred_datetime=datetime.datetime.now()
+    table_name="RealTimeMaskDetection"
+    if source==1:
+        table_name="ArchiveImagesMaskDetection"
 
-def get_report_request_from_localdb():
+    json_dic={
+        "db":"MaskDetection",
+        "TableName":table_name,
+        "Columns":{"year": "year",
+                  "month":"month" ,
+                  "day": "day"},
+        "Values": {
+                   "year": pred_datetime.year,
+                  "month":pred_datetime.month,
+                  "day":pred_datetime.day,
+        }
+        }
+    return json_dic
+        
+def get_report_request_from_localdb(source=0):
+    SQlite3_thread.join()
     try:
-        pred_datetime=datetime.datetime.now()
-
-        json_dic={
-            "db":"MaskDetection",
-            "TableName":"MaskDetectionOutput",
-            "Columns":{"year": "year",
-                      "month":"month" ,
-                      "day": "day"},
-            "Values": {
-                       "year": pred_datetime.year,
-                      "month":pred_datetime.month,
-                      "day":pred_datetime.day,
-
-            }
-            }
-        SQlite3_thread.join()
+        
+        json_dic=prepare_ref_to_get_localdb_report(source) 
         url ="http://localhost:5002/GetbyDate"
         headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
         response = requests.get(url, json=json_dic,headers=headers)
@@ -190,7 +213,7 @@ def get_report_request_from_localdb():
         response=json.loads(response.text)
         
     except:
-        traceback.print_exc()
+       # traceback.print_exc()
         print("retreiving report.... please keep connection on...")
         response=json.loads({'result':0})
     return response

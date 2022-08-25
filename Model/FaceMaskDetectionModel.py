@@ -1,6 +1,6 @@
 
 #training model command line:
-#python FaceMaskDetectionModel.py --dataset C:\Users\user\Desktop\iman\FinalProject\Dataset\FMD_DATASET\train\simple --model C:\Users\user\Desktop\iman\FaceMaskDetection-SocialDistancing\Model\VGG19_FaceMaskDetector.hdf
+#python FaceMaskDetectionModel.py --dataset C:\Users\user\Desktop\iman\FaceMaskDetection-SocialDistancing\Dataset\FMD_DATASET\train\simple --model C:\Users\user\Desktop\iman\FaceMaskDetection-SocialDistancing\Model\VGG19_FaceMaskDetector.hdf
 #testing model command line :
 #    python FaceMaskDetectionModeltester.py --model C:\Users\user\Desktop\iman\FinalProject\Model\VGG19_FaceMaskDetector.hdf  --test-images --dataset C:\Users\user\Desktop\iman\FinalProject\Dataset\FMD_DATASET\complex
 
@@ -62,40 +62,40 @@ lr_rate = 0.001
 epochs = 20
 batch_s = 64
 #
-#print("[INFO] loading images...")
-#imagePaths = list(paths.list_images(args["dataset"]))
+print("[INFO] loading images...")
+imagePaths = list(paths.list_images(args["dataset"]))
 checkpoint_filepath = args["checkpoint"]
-#data = []
-#labels =[]
-#
-#
-#for (i, imagePath) in enumerate(imagePaths):
-#    label = imagePath.split(os.path.sep)[-2]
-#    
-#
-#    image =image_utils.load_img(imagePath, target_size=(224, 224))
-#    image =image_utils.img_to_array(image)
-#    image = preprocess_input((image))
-#
-#
-#    data.append(image)
-#    labels.append(label)
-#
-#    # show an update every 1,000 images
-#    if i > 0 and i % 1000 == 0 or i==25000:
-#        print("[INFO] processed {}/{}".format(i, len(imagePaths)))
-#
-#
-#data = np.array(data, dtype="float32")
-#labels = np.array(labels)
-#print(data.shape)
-#print(labels)
-#print(labels.shape)
-#
-#np.save('images.npy', data)
-#np.save('labels.npy', labels)
-data = np.load('images.npy')
-labels = np.load('labels.npy')
+data = []
+labels =[]
+
+
+for (i, imagePath) in enumerate(imagePaths):
+    label = imagePath.split(os.path.sep)[-2]
+    
+
+    image =image_utils.load_img(imagePath, target_size=(224, 224))
+    image =image_utils.img_to_array(image)
+    image = preprocess_input((image))
+
+
+    data.append(image)
+    labels.append(label)
+
+    # show an update every 1,000 images
+    if i > 0 and i % 1000 == 0 or i==25000:
+        print("[INFO] processed {}/{}".format(i, len(imagePaths)))
+
+
+data = np.array(data, dtype="float32")
+labels = np.array(labels)
+print(data.shape)
+print(labels)
+print(labels.shape)
+
+np.save('images.npy', data)
+np.save('labels.npy', labels)
+#data = np.load('images.npy')
+#labels = np.load('labels.npy')
 print(data.shape)
 print(labels)
 #labels=labels.reshape(1, -1)
@@ -107,7 +107,7 @@ print(labels)
 lb = LabelEncoder()
 labels = lb.fit_transform(labels)
 labels = to_categorical(labels)
-
+print(lb.classes_)
 print(labels)
 #print(labels.shape)
 #print(data.shape)
@@ -121,7 +121,8 @@ print(trainX.shape)
 print(trainY.shape)
 print(testX.shape)
 print(testY.shape)
-
+np.save('testX.npy', testX)
+np.save('testY.npy', testY)
 datagen = ImageDataGenerator(
 	            rotation_range=20,
 	            width_shift_range=0.1,
@@ -189,7 +190,7 @@ early_stopping = EarlyStopping(monitor='val_loss', patience=5)
 schedule = PolynomialDecay(maxEpochs=epochs, initAlpha=.001, power=5)
 learning_rate_callbacks = LearningRateScheduler(schedule)
 model_check_point=ModelCheckpoint(checkpoint_filepath,
-    			monitor="val_loss",
+    			monitor=["val_loss"],
     			verbose=0,
     			save_best_only=False,
     			save_weights_only=False,
@@ -211,7 +212,7 @@ history = model.fit(
 		  validation_freq=1,
 	      epochs=epochs,
           callbacks= [early_stopping,learning_rate_callbacks],#model_check_point],
-          verbose=0)
+          verbose=2)
 
 
 
@@ -227,34 +228,25 @@ actual=np.argmax(testY,axis=1)
 
 print("[INFO] saving mask detector model architecture and weights to file...")
 model.save(args["model"])
-# show a nicely formatted classification report
-print(classification_report(testY.argmax(axis=1), prediction,
-	target_names=lb.classes_))
-print(confusion_matrix(testY.argmax(axis=1),prediction,labels=lb.classes_))
 
-x=np.arange(0, epochs)
+
+#epoch_no=np.arange(0, epochs)
 plt.style.use("ggplot")
 plt.figure()
-plt.plot(x, history.history["loss"], label="train_loss")
-plt.plot(x, history.history["val_loss"], label="val_loss")
-plt.plot(x, history.history["accuracy"], label="train_acc")
-plt.plot(x, history.history["val_accuracy"], label="val_acc")
+plt.plot(history.history["loss"], label="train_loss")
+plt.plot(history.history["val_loss"], label="val_loss")
+plt.plot(history.history["accuracy"], label="train_acc")
+plt.plot(history.history["val_accuracy"], label="val_acc")
 plt.title("Training Loss and Accuracy")
 plt.xlabel("Epoch #")
 plt.ylabel("Loss/Accuracy")
 plt.legend(loc="lower left")
 plt.savefig(args["plot"])
-#plt.subplot(211)
-#plt.title("loss")
-#plt.plot(history.history['loss'],color='blue',label='train')
-#plt.plot(history.history['val_loss'],color='orange',label='test')
-#plt.subplot(212)
-#plt.title("Accuracy")
-#plt.plot(history.history['accuracy'],color='blue',label='train')
-#plt.plot(history.history['val_accuracy'],color='orange',label='test')
-#plt.savefig('FMD_results_plot.png')
-#plt.close()
-#plt.show()
+
+# show classification report
+print(classification_report(testY.argmax(axis=1), prediction,
+	target_names=lb.classes_))
+print(confusion_matrix(testY.argmax(axis=1),prediction,labels=lb.classes_))
 
 
 

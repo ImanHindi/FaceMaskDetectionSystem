@@ -13,7 +13,6 @@ from mediapipe.modules.face_detection import face_detection_pb2
 from mediapipe.calculators.image import image_cropping_calculator_pb2
 from mediapipe.framework.formats.detection_pb2 import Detection
 
-
 # construct the argument parser and parse the arguments
 ap = argparse.ArgumentParser()
 #ap.add_argument("-f", "--face", type=str,
@@ -47,16 +46,10 @@ class FaceMaskDetector():
 		locs = []
 		preds = [] 
 		preds_actual=[] 
+		
 		with faceNet.FaceDetection(
-	    	model_selection=1, min_detection_confidence=0.5) as face_detection:
-			#print(frame)
-			#cv2.imshow("frame",frame)
-			#cv2.waitKey()
-			#cv2.destroyAllWindows()
-	  		# Convert the BGR image to RGB and process it with MediaPipe Face Detection.
-			
+	    	model_selection=1, min_detection_confidence=0.4) as face_detection:
 			results = face_detection.process(cv2.cvtColor(frame,cv2.COLOR_BGR2RGB))
-			#annotated_image = frame.copy()
 			(h, w) = frame.shape[:2]
 			#print(results.detections)
 			#for detection in results.detections:
@@ -76,7 +69,7 @@ class FaceMaskDetector():
 					#print(detection["location_data"]["relative_bounding_box "])
 					#print(detection.values)
 					#box = results.detections[0, 0, i, 3:7] * np.array([w, h, w, h])
-					(startX, startY, endX, endY) = int(coordinates.xmin*w-5),int(coordinates.ymin*h-5),int((coordinates.width+coordinates.xmin)*w+5),int((coordinates.height+coordinates.ymin)*h+5)#.location_data.relative_bounding_box
+					(startX, startY, endX, endY) = int(coordinates.xmin*w-10),int(coordinates.ymin*h-10),int((coordinates.width+coordinates.xmin)*w+10),int((coordinates.height+coordinates.ymin)*h+10)#.location_data.relative_bounding_box
 					# ensure the bounding boxes fall within the dimensions of
 					# the frame
 					#print(startX, startY, endX, endY)
@@ -87,7 +80,7 @@ class FaceMaskDetector():
 					# extract the face ROI, convert it from BGR to RGB channel
 					# ordering, resize it to 224x224, and preprocess it
 					face = frame[startY:endY, startX:endX]
-					#cv2.imshow("face",face)
+					
 					#cv2.waitKey()
 					#cv2.destroyAllWindows()
 					if face.any():
