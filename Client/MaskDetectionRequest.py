@@ -46,9 +46,7 @@ def prepare_data_for_firebase(data,pred_datetime,source):
     }
     return ref,json_dic
 
-def firebase_task(data,pred_datetime,source):
-    
-    
+def firebase_task(data,pred_datetime,source): 
     print("threadtask",data)
     if any(data.values()):
         print("nullpart",data['locs'])
@@ -99,7 +97,6 @@ def SQlite3_task(data,pred_datetime,source):
     if any(data.values()):
         
         url ="http://localhost:5002/CreateTable"
-        #json_dic=json.dumps({'json_dic':json_dic})
         headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
         json_dic=prepare_table_for_SQlite3(source)
         
@@ -109,14 +106,9 @@ def SQlite3_task(data,pred_datetime,source):
         if res:
             json_dic=prepare_data_for_SQlite3(data,pred_datetime,source)    
             url ="http://localhost:5002/InsertData"
-            #json_dic=json.dumps({'json_dic':json_dic})
             headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
             res=requests.post(url,json=json_dic,headers=headers)
             print(res)
-
-
-
-
 
 
 def prediction_request(frame,source=0):
@@ -177,7 +169,8 @@ def get_report_request_from_firebase(source=0):
         print(response,"this is request report response")
     except:
         print("cannot retreive the report... check internet connection and try again.")
-        response=json.loads({'result':0})
+        response=json.dumps({'result':0})
+        response=json.loads(response)
     return response
 def prepare_ref_to_get_localdb_report(source):
     pred_datetime=datetime.datetime.now()
@@ -201,21 +194,20 @@ def prepare_ref_to_get_localdb_report(source):
         
 def get_report_request_from_localdb(source=0):
     SQlite3_thread.join()
-    try:
-        
+    try:  
         json_dic=prepare_ref_to_get_localdb_report(source) 
         url ="http://localhost:5002/GetbyDate"
         headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
         response = requests.get(url, json=json_dic,headers=headers)
         print("response from local db in detection request",response)
-        
-        print(response.text['result'])
+        print(response.text)
         response=json.loads(response.text)
         
     except:
-       # traceback.print_exc()
+        traceback.print_exc
         print("retreiving report.... please keep connection on...")
-        response=json.loads({'result':0})
+        response=json.dumps({'result':0})
+        response=json.loads(response)
     return response
 
 

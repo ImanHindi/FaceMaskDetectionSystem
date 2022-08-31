@@ -1,9 +1,6 @@
 
 #training model command line:
-#python FaceMaskDetectionModel.py --dataset C:\Users\user\Desktop\iman\FaceMaskDetection-SocialDistancing\Dataset\FMD_DATASET\train\simple --model C:\Users\user\Desktop\iman\FaceMaskDetection-SocialDistancing\Model\VGG19_FaceMaskDetector.hdf
-#testing model command line :
-#    python FaceMaskDetectionModeltester.py --model C:\Users\user\Desktop\iman\FinalProject\Model\VGG19_FaceMaskDetector.hdf  --test-images --dataset C:\Users\user\Desktop\iman\FinalProject\Dataset\FMD_DATASET\complex
-
+#python FaceMaskDetectionModel.py --dataset C:\Users\user\Desktop\iman\FinalProject\Dataset\FMD_DATASET\train\simple --model C:\Users\user\Desktop\iman\FinalProject\Model\VGG19_FaceMaskDetector.hdf
 
 
 # import the necessary packages
@@ -22,7 +19,7 @@ from keras.preprocessing.image import image_utils
 from keras.callbacks import LearningRateScheduler
 from keras.callbacks import EarlyStopping,ModelCheckpoint
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import classification_report,confusion_matrix
+from sklearn.metrics import classification_report,confusion_matrix,multilabel_confusion_matrix
 from imutils import paths
 import matplotlib.pyplot as plt
 import numpy as np
@@ -43,9 +40,6 @@ class PolynomialDecay():
 		return float(alpha)
 
 
-def image_resize(image, size):
-	
-	return cv2.resize(image, size)
 
 ap = argparse.ArgumentParser()
 ap.add_argument("-d", "--dataset", required=True,
@@ -61,66 +55,36 @@ args = vars(ap.parse_args())
 lr_rate = 0.001
 epochs = 20
 batch_s = 64
-#
+
 print("[INFO] loading images...")
 imagePaths = list(paths.list_images(args["dataset"]))
 checkpoint_filepath = args["checkpoint"]
 data = []
 labels =[]
-
-
 for (i, imagePath) in enumerate(imagePaths):
     label = imagePath.split(os.path.sep)[-2]
-    
-
     image =image_utils.load_img(imagePath, target_size=(224, 224))
     image =image_utils.img_to_array(image)
     image = preprocess_input((image))
-
-
     data.append(image)
     labels.append(label)
-
     # show an update every 1,000 images
     if i > 0 and i % 1000 == 0 or i==25000:
         print("[INFO] processed {}/{}".format(i, len(imagePaths)))
 
-
 data = np.array(data, dtype="float32")
 labels = np.array(labels)
-print(data.shape)
-print(labels)
-print(labels.shape)
 
 np.save('images.npy', data)
 np.save('labels.npy', labels)
-#data = np.load('images.npy')
-#labels = np.load('labels.npy')
-print(data.shape)
-print(labels)
-#labels=labels.reshape(1, -1)
-#print(labels.shape)
-#lb = OneHotEncoder()
-#labels = lb.fit_transform(labels)
-#print(labels.shape)
-##labels = to_categorical(labels)
+
 lb = LabelEncoder()
 labels = lb.fit_transform(labels)
 labels = to_categorical(labels)
-print(lb.classes_)
-print(labels)
-#print(labels.shape)
-#print(data.shape)
-
-
-
 
 (trainX, testX, trainY, testY) = train_test_split(data, labels,
 	test_size=0.2, random_state=42)
-print(trainX.shape)
-print(trainY.shape)
-print(testX.shape)
-print(testY.shape)
+
 np.save('testX.npy', testX)
 np.save('testY.npy', testY)
 datagen = ImageDataGenerator(
@@ -134,11 +98,7 @@ datagen = ImageDataGenerator(
 pre_trained_model = vgg19.VGG19(weights="imagenet", include_top=False,
 	input_tensor=Input(shape=(224, 224, 3)))
 
-
-
-
 headModel = pre_trained_model.output
-#headModel = MaxPooling2D(pool_size=(6, 6))(headModel)
 headModel = Flatten(name="flatten")(headModel)
 headModel = Dense(128, activation="relu")(headModel)
 headModel = Dropout(0.5)(headModel)
@@ -150,48 +110,21 @@ model = Model(inputs=pre_trained_model.input, outputs=headModel)
 for layer in pre_trained_model.layers:
 	layer.trainable = False
 
-
 # show a summary of the base model
 print("[INFO] summary for base model...")
 print(pre_trained_model.summary())
 print(model.summary())
 
 
-
-#model=Sequential([
-#    Conv2D(num_filters_1,filter_size,input_shape=(200,200,3),kernel_initializer='he_uniform',strides=1,padding='same'),
-#    Activation("relu"),
-#    MaxPooling2D(pool_size, strides=(2, 2)),
-#	Dropout(0.2),
-#    
-#    Conv2D(num_filters_2,filter_size,strides=1,kernel_initializer='he_uniform',padding='same'),
-#	Activation("relu"),
-#    MaxPooling2D(pool_size),
-#    Dropout(0.25),
-#
-#	Conv2D(num_filters_3, filter_size, activation='relu', kernel_initializer='he_uniform', padding='same'),
-#	MaxPooling2D(pool_size),
-#    Flatten(),
-#	Dropout(.2),
-#
-#	Dense(128,activation='relu',kernel_initializer='he_uniform'),
-#	Dropout(.5),
-#
-#    Dense(3,activation='softmax')
-#])
-
-
-
-
-  
+ 
 print("[INFO] compiling model...")
 opt = Adam(learning_rate=lr_rate, decay=lr_rate / epochs)
-early_stopping = EarlyStopping(monitor='val_loss', patience=5)
+early_stopping = EarlyStopping(monitor='val_loss', patience=3)
 schedule = PolynomialDecay(maxEpochs=epochs, initAlpha=.001, power=5)
 learning_rate_callbacks = LearningRateScheduler(schedule)
 model_check_point=ModelCheckpoint(checkpoint_filepath,
-    			monitor=["val_loss"],
-    			verbose=0,
+    			monitor="acc",
+    			verbose=2,
     			save_best_only=False,
     			save_weights_only=False,
     			mode="auto",
@@ -230,7 +163,6 @@ print("[INFO] saving mask detector model architecture and weights to file...")
 model.save(args["model"])
 
 
-#epoch_no=np.arange(0, epochs)
 plt.style.use("ggplot")
 plt.figure()
 plt.plot(history.history["loss"], label="train_loss")
@@ -241,9 +173,9 @@ plt.title("Training Loss and Accuracy")
 plt.xlabel("Epoch #")
 plt.ylabel("Loss/Accuracy")
 plt.legend(loc="lower left")
-plt.savefig(args["plot"])
+plt.savefig("AccLossPlot")
 
-# show classification report
+# show classification report and confusion matrix
 print(classification_report(testY.argmax(axis=1), prediction,
 	target_names=lb.classes_))
 print(confusion_matrix(testY.argmax(axis=1),prediction,labels=lb.classes_))

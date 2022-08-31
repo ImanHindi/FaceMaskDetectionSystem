@@ -82,7 +82,6 @@ def InsertData():
     local_database = LocalDataBase(DataBase)
     Table= query['TableName']
     Columns=query['Columns']
-    #id=query['ID']
     Values=query['Values']
     print(Table,Columns,Values)
     result =local_database.insert_data(Table,Columns,Values)

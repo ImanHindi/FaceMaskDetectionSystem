@@ -7,8 +7,6 @@ from flask import Flask,request, jsonify,abort
 from PIL import Image
 import numpy as np
 import io
-
-#from FaceMaskDetector import detect_and_predict_mask
 import os
 import sys
 
@@ -23,9 +21,6 @@ app.logger.setLevel(logging.DEBUG)
 
 
 
-@app.route('/Prediction', methods=['GET'])
-def prediction():
-    return 'Pinging Model Application!!'
 
 @app.route('/PredictMask', methods=['POST','GET'])
 def predict_mask():

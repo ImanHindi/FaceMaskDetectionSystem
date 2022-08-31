@@ -18,8 +18,7 @@ q=queue.Queue()
 class FirebaseDataBase:
     def __init__(self):
         self.conn=self.connect_to_database('https://face-mask-detection-2778f-default-rtdb.firebaseio.com/')
-        
-
+    
     def connect_to_database(self,databaseURL):
         try:
             self.cred = credentials.Certificate('C:\\Users\\user\\Desktop\\iman\\FinalProject\\APIs\\face-mask-detection-2778f-firebase-adminsdk-qbbbj-95171a0d30.json')
@@ -30,30 +29,13 @@ class FirebaseDataBase:
             return "checking internet connection..."        
             
 
-    #def create_table(self, ref, tbname):
-    #    try:
-    #        tbname=json.loads(tbname)
-    #        root = db.reference(ref)
-    #        res=root.set(tbname)
-    #        return res
-    #    except:
-    #        traceback.print_exc()
-    #        return traceback.print_exc()
-
     def insert_data(self, ref,data):
         try:
                 
             root = db.reference(ref["master"]+ref["year"]+ref["month"]+ref["day"]+ref["hour"]+ref["minute"]+ref["second"])
-            #res=root.set(data)
-            #root.parent
-            #rootReference = db.child("-Blah1").child("name").getRoot();
-            #db.parse
             res=root.set(data)
-            #root=root.child(data)
-            #res=root.set(data['year']['month']['day']['hour']['minute']['second'])
             return res
         except:
-            #traceback.print_exc()
             return "checking internet connection..."
 
     def get_data(self, ref):
@@ -62,7 +44,6 @@ class FirebaseDataBase:
                 data=root.get()
                 return data
             except:
-                #traceback.print_exc()
                 return "checking internet connection..."
 
     def get_data_by_Date(self, ref):    
@@ -75,7 +56,6 @@ class FirebaseDataBase:
                 return result
             except:
                 #traceback.print_exc()
-                #return traceback.print_exc()
                 print("no connection to retreive the data.")
 
     def Delete_by_Date(self, ref):    
@@ -140,53 +120,24 @@ def InsertData():
         try: 
             print("InsertData")
             conn=FirebaseDataBase()
-            #ref=request.args.get('ref')
             ref =request.json['ref']
             print('ref',request.json['ref'])
             data=request.json['json_dic']
             print("firebasepart",data)
-            #data=json.dumps(data) 
             while not q.empty():
                 queued_data=json.dumps(q.get())
                 res=conn.insert_data(ref,queued_data) 
-            #thread1= Thread(target=task,args=(data,ref))
-            #thread1.start()
 
             res=conn.insert_data(ref,data) 
             print( "successfully inserted")
             conn.close_connection()
-            return "successfully inserted"
-            
+            return "successfully inserted"       
         except:
             q.put(ref,data)
-            print("checking internet connection...")
-            
+            print("checking internet connection...") 
             
         return res
      
-
-
-#def task(data,ref):
-#    conn=FirebaseDataBase()
-#    if conn.connect_to_database():
-#        while not q.empty():
-#            (ref,data)=json.dumps(q.get())
-#            res=conn.insert_data(ref,data)
-#            print(res)
-#            
-#        conn.close_connection()
-#        
-#    else:
-#        q.put(ref,data)
-#    # display a message
-    
-#    print('This is from another thread')
-    
-
-
-
-
-
 
 if __name__ == '__main__':
     try:
@@ -198,5 +149,3 @@ if __name__ == '__main__':
     except:
         print("checking server connection...")
         
-
-#'https://face-mask-detection-2778f-default-rtdb.firebaseio.com/' 
