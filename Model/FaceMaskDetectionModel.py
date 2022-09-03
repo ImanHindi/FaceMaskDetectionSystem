@@ -28,7 +28,7 @@ import os
 import cv2
 
 
-
+#create the polynomial learning rate decay schedule 
 class PolynomialDecay():
 	def __init__(self, maxEpochs=20, initAlpha=0.001, power=5.0):
 		self.maxEpochs = maxEpochs
@@ -51,11 +51,13 @@ ap.add_argument("-m", "--model", required=True,
 	help="face mask detector model path")
 args = vars(ap.parse_args())
 
-
+#configure the initial value of some hyper parameters :
+#learning rate, batch size and number of epochs
 lr_rate = 0.001
 epochs = 20
 batch_s = 64
 
+#image processing part
 print("[INFO] loading images...")
 imagePaths = list(paths.list_images(args["dataset"]))
 checkpoint_filepath = args["checkpoint"]
@@ -78,15 +80,18 @@ labels = np.array(labels)
 np.save('images.npy', data)
 np.save('labels.npy', labels)
 
+#one hot encoding for labels
 lb = LabelEncoder()
 labels = lb.fit_transform(labels)
 labels = to_categorical(labels)
 
+#splitting the data into test and train
 (trainX, testX, trainY, testY) = train_test_split(data, labels,
 	test_size=0.2, random_state=42)
 
 np.save('testX.npy', testX)
 np.save('testY.npy', testY)
+#initialize the Image data generator operations needed to enlarge the data size
 datagen = ImageDataGenerator(
 	            rotation_range=20,
 	            width_shift_range=0.1,
@@ -94,19 +99,21 @@ datagen = ImageDataGenerator(
 	            shear_range=0.15,
 	            horizontal_flip=True)
 
-
+#built and trained the model using VGG_19 pre-trained model
+#1.Remove the fully connected nodes at the end of the network
 pre_trained_model = vgg19.VGG19(weights="imagenet", include_top=False,
 	input_tensor=Input(shape=(224, 224, 3)))
-
+#2.Replace the fully connected nodes with freshly initialized ones.
 headModel = pre_trained_model.output
 headModel = Flatten(name="flatten")(headModel)
 headModel = Dense(128, activation="relu")(headModel)
 headModel = Dropout(0.5)(headModel)
 headModel = Dense(3, activation="softmax")(headModel)
 
-
+#add the two models to gether
 model = Model(inputs=pre_trained_model.input, outputs=headModel)
-
+#3.Freeze earlier CONV layers earlier in the network 
+# (ensuring that any previous robust features learned by the CNN are not destroyed). 
 for layer in pre_trained_model.layers:
 	layer.trainable = False
 
@@ -116,7 +123,17 @@ print(pre_trained_model.summary())
 print(model.summary())
 
 
- 
+#compile the model by configure the hyper parameters and their adjustment functions 
+#through callbacks:
+#1.	Initialize the number of epochs and batch size
+#2.Choose the Adam optimizer to optimize the model and reduce the validation loss
+#3.Apply early stopping to allow the system to stop earlier when reach the lowest validation loss
+#and to prevent the model from overfitting
+#4.Apply polynomial learning rate decay schedule to adjust the learning rate decayed during 
+# the training process (initialized with 0.001). 
+#5.	Use the categorical cross entropy to calculate the loss function 
+# (which is usually used with multi class classification). 
+#6.Use model check point to save the best model observed during training for later use.
 print("[INFO] compiling model...")
 opt = Adam(learning_rate=lr_rate, decay=lr_rate / epochs)
 early_stopping = EarlyStopping(monitor='val_loss', patience=3)
@@ -135,7 +152,7 @@ model_check_point=ModelCheckpoint(checkpoint_filepath,
 model.compile(loss="categorical_crossentropy", optimizer=opt,
 	metrics=["accuracy"])
 
-
+#fit and train the model using Online augmentation to enlarge the data size during the training process
 print("[INFO] training head...")
 history = model.fit(
 	      datagen.flow(trainX, trainY, batch_size=batch_s),
@@ -148,7 +165,7 @@ history = model.fit(
           verbose=2)
 
 
-
+#evaluate the model using the testing data set
 print("[INFO] evaluating on testing set...")
 (val_loss, val_accuracy) = model.evaluate(testX, testY,batch_size=batch_s, verbose=1)
 print("[INFO] val_loss={:.4f}, val_accuracy: {:.4f}%".format(val_loss,val_accuracy * 100))
@@ -158,11 +175,11 @@ print("[INFO] evaluating network...")
 prediction = model.predict(testX, batch_size=batch_s)
 prediction = np.argmax(prediction, axis=1)
 actual=np.argmax(testY,axis=1)
-
+#save the model to be used for detection purposes
 print("[INFO] saving mask detector model architecture and weights to file...")
 model.save(args["model"])
 
-
+#plot the val_accuracy and val_loss VS. epochs number
 plt.style.use("ggplot")
 plt.figure()
 plt.plot(history.history["loss"], label="train_loss")

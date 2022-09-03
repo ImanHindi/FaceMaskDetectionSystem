@@ -39,7 +39,7 @@ args = vars(ap.parse_args())
 
 
 
-# initialize the class labels for the Kaggle dogs vs cats dataset
+# initialize the class labels
 CLASSES = ["incorrect Mask","Mask" ,"No Mask"]
 # load the network
 print("[INFO] loading network architecture and weights...")
@@ -50,7 +50,7 @@ print("[INFO] testing on images in {}".format(args["test_images"]))
 testX=np.load('testX.npy')
 testY=np.load('testY.npy')
 
-
+#use the model to make detectionon the testing dataset
 print("[INFO] evaluating network...")
 prob = model.predict(testX, batch_size=32)
 
@@ -64,10 +64,22 @@ np.save('actual.npy',actual)
 # show a nicely formatted classification report
 report=classification_report(actual, prediction,target_names=CLASSES,output_dict=True)
 print(report)
+df = pd.DataFrame.from_dict(report)
+print(df)
+dfi.export(df, "classification_report2.png")
+
+
+#show the confusion matrix of the three classes labels
 confusion_mat=confusion_matrix(actual,prediction)
 print(confusion_mat)
-incorrect_cm,mask_cm,no_mask_cm=multilabel_confusion_matrix(actual,prediction)
+df = pd.DataFrame(confusion_mat,columns=['Incorrect mask', 'Mask', 'No mask'],index=['Incorrect mask', 'Mask', 'No mask'])
+df_styled = df.style.background_gradient()
+dfi.export(df_styled, "confusion_mat.png")
 
+
+
+#show the confusion matrix of each class label
+incorrect_cm,mask_cm,no_mask_cm=multilabel_confusion_matrix(actual,prediction)
 
 df_incorrect_cm = pd.DataFrame(incorrect_cm,columns=['positive','negative'],index=['positive', 'Negative'])
 df_styled = df_incorrect_cm.style.background_gradient()
@@ -81,14 +93,9 @@ df_no_mask_cm = pd.DataFrame(no_mask_cm,columns=['positive','negative'],index=['
 df_styled = df_no_mask_cm.style.background_gradient()
 dfi.export(df_styled, "df_no_mask_cm.png")
 
-df = pd.DataFrame(confusion_mat,columns=['Incorrect mask', 'Mask', 'No mask'],index=['Incorrect mask', 'Mask', 'No mask'])
-df_styled = df.style.background_gradient()
-dfi.export(df_styled, "confusion_mat.png")
-print(type(report))
 
-df = pd.DataFrame.from_dict(report)
-print(df)
-dfi.export(df, "classification_report2.png")
+
+#ROC Plot for the three classes labels
 lr_tpr=dict()
 lr_fpr=dict()
 fpr = dict()
@@ -114,41 +121,7 @@ for i in range(3):
 	plt.savefig('ROC Curve')
 	plt.show()
 
-fpr["micro"], tpr["micro"], _ = roc_curve(testY.ravel(), prob.ravel())
-roc_auc["micro"] = auc(fpr["micro"], tpr["micro"])
-
-# First aggregate all false positive rates
-all_fpr = np.unique(np.concatenate([fpr[i] for i in range(len(CLASSES))]))
-# Then interpolate all ROC curves at this points
-mean_tpr = np.zeros_like(all_fpr)
-for i in range(len(CLASSES)):
-    mean_tpr += np.interp(all_fpr, fpr[i], tpr[i])
-# Finally average it and compute AUC
-mean_tpr /= len(CLASSES)
-
-fpr["macro"] = all_fpr
-tpr["macro"] = mean_tpr
-roc_auc["macro"] = auc(fpr["macro"], tpr["macro"])
-# Plot all ROC curves
-plt.figure()
-plt.plot(
-    fpr["micro"],
-    tpr["micro"],
-    label="micro-average ROC curve (area = {0:0.2f})".format(roc_auc["micro"]),
-    color="orange",
-    linestyle=":",
-    linewidth=4,
-)
-plt.show()
-plt.plot(
-    fpr["macro"],
-    tpr["macro"],
-    label="macro-average ROC curve (area = {0:0.2f})".format(roc_auc["macro"]),
-    color="navy",
-    linestyle=":",
-    linewidth=4,
-)
-plt.show()
+#plot the ROC curve of each class label in the same figure
 lw=2
 colors = cycle(["aqua", "darkorange", "navy"])
 for i, color in zip(range(3), colors):
@@ -167,4 +140,42 @@ plt.xlabel("False Positive Rate")
 plt.ylabel("True Positive Rate")
 plt.title(" Receiver operating characteristic to multiclass")
 plt.legend(loc="lower right")
+plt.show()
+
+#micro average ROC plot of the three class labels
+fpr["micro"], tpr["micro"], _ = roc_curve(testY.ravel(), prob.ravel())
+roc_auc["micro"] = auc(fpr["micro"], tpr["micro"])
+
+# First aggregate all false positive rates
+all_fpr = np.unique(np.concatenate([fpr[i] for i in range(len(CLASSES))]))
+# Then interpolate all ROC curves at this points
+mean_tpr = np.zeros_like(all_fpr)
+for i in range(len(CLASSES)):
+    mean_tpr += np.interp(all_fpr, fpr[i], tpr[i])
+# Finally average it and compute AUC
+mean_tpr /= len(CLASSES)
+plt.figure()
+plt.plot(
+    fpr["micro"],
+    tpr["micro"],
+    label="micro-average ROC curve (area = {0:0.2f})".format(roc_auc["micro"]),
+    color="orange",
+    linestyle=":",
+    linewidth=4,
+)
+plt.show()
+
+#plot the macro average ROC curve for the three class labels
+fpr["macro"] = all_fpr
+tpr["macro"] = mean_tpr
+roc_auc["macro"] = auc(fpr["macro"], tpr["macro"])
+# Plot macro ROC curves
+plt.plot(
+    fpr["macro"],
+    tpr["macro"],
+    label="macro-average ROC curve (area = {0:0.2f})".format(roc_auc["macro"]),
+    color="navy",
+    linestyle=":",
+    linewidth=4,
+)
 plt.show()

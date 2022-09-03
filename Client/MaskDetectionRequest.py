@@ -24,7 +24,7 @@ import requests
 import base64
 
 
-
+#function to prepare the reference for the data to be saved correctly on firebase
 def prepare_data_for_firebase(data,pred_datetime,source):
     
     master="/RealTimeMaskDetectionReport"
@@ -45,7 +45,8 @@ def prepare_data_for_firebase(data,pred_datetime,source):
         "maskdetection":data['preds_actual']
     }
     return ref,json_dic
-
+#this task function is excuted in a separate thread to save the data on firebase db with out affecting
+#the mask detection process
 def firebase_task(data,pred_datetime,source): 
     print("threadtask",data)
     if any(data.values()):
@@ -57,7 +58,8 @@ def firebase_task(data,pred_datetime,source):
         url ="http://localhost:5001/InsertData"
         res=requests.post(url,data=json_dic,headers=headers)
         print(res)  
-
+#fuction to prepare the desired tables for local db (source 0 table for real time session data 
+# & source 1 for archived images data)
 def prepare_table_for_SQlite3(source): 
     table_name="RealTimeMaskDetection"
     if source==1:
@@ -68,7 +70,7 @@ def prepare_table_for_SQlite3(source):
         "Columns":"ID INTEGER PRIMARY KEY AUTOINCREMENT ,year varchar(255) ,month varchar(255),day varchar(255),hour varchar(255),minute varchar(255) ,second varchar(255),locations BLOB,predictions BLOB,maskdetection BLOB",
         }
     return json_dic
-
+#fuction to prepare the data to be saved in local db
 def prepare_data_for_SQlite3(data,pred_datetime,source):
     
     table_name="RealTimeMaskDetection"
@@ -92,7 +94,8 @@ def prepare_data_for_SQlite3(data,pred_datetime,source):
             }
             }
     return json_dic
-
+#task on a separate thread to save the data smoothly in the SQlite3 database without delay in the functionality
+#of the system
 def SQlite3_task(data,pred_datetime,source):
     if any(data.values()):
         
@@ -110,7 +113,7 @@ def SQlite3_task(data,pred_datetime,source):
             res=requests.post(url,json=json_dic,headers=headers)
             print(res)
 
-
+#the request fuction that is responsible to communicate with the model and make a request for mask detection
 def prediction_request(frame,source=0):
     #Web Service Prediction:
     url ="http://127.0.0.1:5000/PredictMask"
@@ -143,6 +146,7 @@ def prediction_request(frame,source=0):
     except:
         print( "check connection to the server and try again..")
         return 
+#function to prepare the reference of the data to be returned
 def prepare_ref_to_get_firebase_report(source):      
     pred_datetime=datetime.datetime.now()
     master="/RealTimeMaskDetectionReport"
@@ -155,6 +159,7 @@ def prepare_ref_to_get_firebase_report(source):
             "day":"/day/"+str(pred_datetime.day),
         }
     return ref
+# function to fech all the data of a specified day from firebase db
 def get_report_request_from_firebase(source=0):
     firebase_thread.join()
     
@@ -172,6 +177,7 @@ def get_report_request_from_firebase(source=0):
         response=json.dumps({'result':0})
         response=json.loads(response)
     return response
+#fuction to specify the ref for a specific day for data to be returned fron local db
 def prepare_ref_to_get_localdb_report(source):
     pred_datetime=datetime.datetime.now()
     table_name="RealTimeMaskDetection"
@@ -191,7 +197,7 @@ def prepare_ref_to_get_localdb_report(source):
         }
         }
     return json_dic
-        
+#function to get data from firebase depending on specific day value      
 def get_report_request_from_localdb(source=0):
     SQlite3_thread.join()
     try:  

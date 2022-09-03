@@ -43,9 +43,10 @@ class VideoCapture:
 	def read(self):
 		return self.q.get()
 
-	# initialize the video stream and allow the camera sensor to warm upwdd
+	# initialize the video stream and allow the camera sensor to warm up 
+	#this is done in separate threadto allow the system to take the lates fram from camera video stream
 cap = VideoCapture(0)	
-# loop over the frames from the video stream
+# loop over the frames from the video stream to make detection for faces and mask corresponding to each one
 while True:
 	frame = cap.read()
 	frame = imutils.resize(frame, width=400)
@@ -55,7 +56,7 @@ while True:
 	# loop over the detected face locations and their corresponding detections
 	if (locs, preds):
 		for (box, pred,pred_actual) in zip(locs, preds,preds_actual):
-			# unpack the bounding box and predictions
+			# unpack the bounding box and predictions and specify the class label for each face
 			(startX, startY, endX, endY) = box
 			if np.argmax(pred)==0: 
 				label = "incorrectMask"
@@ -78,8 +79,10 @@ while True:
 	# if the `q` key was pressed, break from the loop
 	if chr(cv2.waitKey(1)&255) == 'q':
 		break
-# do a bit of cleanup
+#cleanup
 cv2.destroyAllWindows()
+#call this function to get data from db and prepare aformated csv reports to
+# the results of the day or session  
 prepare_and_save_report()
 
 

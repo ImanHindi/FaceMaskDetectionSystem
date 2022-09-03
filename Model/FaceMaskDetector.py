@@ -23,7 +23,7 @@ ap.add_argument("-m", "--model", type=str,
 	help="path to trained face mask detector model")
 args = vars(ap.parse_args())
 class FaceMaskDetector():
-
+	#load mediapipe face detector
 	print("[INFO] loading face detector model...")
 	faceNet = mp.solutions.face_detection
 	mp_drawing = mp.solutions.drawing_utils
@@ -31,20 +31,19 @@ class FaceMaskDetector():
 	
 	# load the face mask detector model from disk
 	print("[INFO] loading face mask detector model...")
-	maskNet = load_model('C:\\Users\\user\\Desktop\\iman\\FaceMaskDetection-SocialDistancing\\Model \
-							\\VGG19_FaceMaskDetector.hdf')
+	maskNet = load_model('C:\\Users\\user\\Desktop\\iman\\FaceMaskDetection-SocialDistancing\\Model\\VGG19_FaceMaskDetector.hdf')
 	
 	def detect_and_predict_mask(frame, faceNet=faceNet, maskNet=maskNet):
 		faces = []
 		locs = []
 		preds = [] 
 		preds_actual=[] 
-		
+		#face detection using mediapipe detector model
 		with faceNet.FaceDetection(
 	    	model_selection=1, min_detection_confidence=0.5) as face_detection:
 			results = face_detection.process(cv2.cvtColor(frame,cv2.COLOR_BGR2RGB))
 			(h, w) = frame.shape[:2]
-			# loop over the detections
+			# loop over the face detections
 			if results.detections:
 				for detection in results.detections:
 					coordinates=detection.location_data.relative_bounding_box

@@ -18,7 +18,7 @@ q=queue.Queue()
 class FirebaseDataBase:
     def __init__(self):
         self.conn=self.connect_to_database('https://face-mask-detection-2778f-default-rtdb.firebaseio.com/')
-    
+#function to make the connection to firebase   
     def connect_to_database(self,databaseURL):
         try:
             self.cred = credentials.Certificate('C:\\Users\\user\\Desktop\\iman\\FinalProject\\APIs\\face-mask-detection-2778f-firebase-adminsdk-qbbbj-95171a0d30.json')
@@ -28,7 +28,7 @@ class FirebaseDataBase:
         except:
             return "checking internet connection..."        
             
-
+#insert data to firebase
     def insert_data(self, ref,data):
         try:
                 
@@ -37,7 +37,7 @@ class FirebaseDataBase:
             return res
         except:
             return "checking internet connection..."
-
+#get all data from firebase db
     def get_data(self, ref):
             root = db.reference(ref)
             try:
@@ -45,7 +45,7 @@ class FirebaseDataBase:
                 return data
             except:
                 return "checking internet connection..."
-
+#retreive the data of specific day 
     def get_data_by_Date(self, ref):    
             
             root = db.reference(ref["master"]+ref["year"]+ref["month"]+ref["day"])
@@ -57,7 +57,7 @@ class FirebaseDataBase:
             except:
                 #traceback.print_exc()
                 print("no connection to retreive the data.")
-
+#delete data for a specific day
     def Delete_by_Date(self, ref):    
                 root = db.reference(ref)
                 try:
@@ -66,8 +66,7 @@ class FirebaseDataBase:
                 except:
                    # traceback.print_exc()
                     "checking internet connection..."
-
-    
+#close the connection to db 
     def close_connection(self):
         try:
             return firebase_admin.delete_app()
@@ -77,7 +76,7 @@ class FirebaseDataBase:
   
 
 
-#Fetch All DB Data
+#Fetch All DB Data rout
 @app.route('/Get_Data',methods=['GET'])         
 def Get_Data():
     conn=FirebaseDataBase()
@@ -88,7 +87,7 @@ def Get_Data():
     return data
     
 
-#get Data for a specified Date      
+#get Data for a specified Date rout   
 @app.route('/GetbyDate',methods=['GET'])           
 def GetbyDate():
     print("GetbyDate")
@@ -101,7 +100,7 @@ def GetbyDate():
     return data
     
 
-#delete from DB
+#delete from DB rout
 @app.route("/Delete",methods=['DELET'])
 def Delete():
     conn=FirebaseDataBase()
@@ -109,12 +108,9 @@ def Delete():
     res=conn.Delete_by_Date(ref)
     conn.close_connection()
     return res
+    
 
-
-
-     
-
-#Insert new item to DB
+#Insert new item to DB reout
 @app.route('/InsertData',methods=['POST','GET'])
 def InsertData():
         try: 

@@ -18,7 +18,7 @@ class LocalDataBase:
         except:
             print("checking localdb connection...")
     
-
+#creat a table on local db
     def create_table(self, tbname, columns):
         query=f"CREATE TABLE IF NOT EXISTS '{tbname}'({columns});"
         try:
@@ -28,7 +28,7 @@ class LocalDataBase:
         except:
             traceback.print_exc()
             return "checking localdb connection..."
-
+#insert data to local db
     def insert_data(self, tbname, columns, values):
         print('insert')
         query=f'''INSERT INTO '{tbname}' ( {columns} ) 
@@ -44,7 +44,7 @@ class LocalDataBase:
         except:
             traceback.print_exc()
             return "checking localdb connection..."
-
+#get all data from local db
     def get_data(self, tbname,colum,value):
         query=f"SELECT * FROM {tbname} WHERE {colum['year']} = {value['year']} AND {colum['month']} = {value['month']} AND {colum['day']} = {value['day']} "
         try:
@@ -55,11 +55,11 @@ class LocalDataBase:
         except:
             traceback.print_exc()
             return "checking localdb connection..."
-
+#close the connection
     def close_connection(self):
         self.conn.close()
 
-
+#routs and fuction of SQlite API
 @app.route('/CreateTable', methods=['POST','GET'])
 def CreateTable():
     query=request.json
@@ -103,7 +103,6 @@ def GetbyDate():
     result=json.dumps({"result": result})
     print(result,"out result")
     return result
-
 
 
 if __name__ == '__main__':

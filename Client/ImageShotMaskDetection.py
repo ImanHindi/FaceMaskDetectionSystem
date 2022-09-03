@@ -21,6 +21,7 @@ def mask_image():
 
 	args = vars(ap.parse_args())
 	i=0
+	#for loop to iterate over all the images in the directory 
 	for imagePath in paths.list_images(args["images"]):
 		# load the input image from disk, clone it, and send it to the model API
 		#  for preprocessing and detection
@@ -28,8 +29,10 @@ def mask_image():
 		imagePath[imagePath.rfind("/") + 1:]))
 		image = cv2.imread(imagePath)
 		cv2.imwrite('image.png',image)
+		#prediction_request function called to make the desired mask detections and it returns 
+		#location of faces and the mas detection prob. for each and the corresponding class label for each face
 		(locs, preds,preds_actual) = prediction_request('image.png',source=1)
-		
+		#loop over the location of faces to visualize the result of mask detection on screen
 		if (locs, preds):
 			for (box, pred,pred_actual) in zip(locs, preds,preds_actual):
 				# unpack the bounding box and predictions
@@ -65,4 +68,7 @@ def mask_image():
 
 if __name__ == "__main__":
 	mask_image()
+
+#call this function to get data from db and prepare aformated csv reports to
+# the results of the mask detections of images in the specified directory 
 prepare_and_save_report(source=1)
