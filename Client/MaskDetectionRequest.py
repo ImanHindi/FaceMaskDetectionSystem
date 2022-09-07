@@ -38,6 +38,7 @@ def prepare_data_for_firebase(data,pred_datetime,source):
         "hour":"/hour/"+str(pred_datetime.hour),
         "minute":"/minute/"+str(pred_datetime.minute),
         "second":"/second/"+str(pred_datetime.second)+"/"
+       # "secondpart":"/secondpart/"+str(pred_datetime.microsecond)
     }
     json_dic={
         "facelocation":data['locs'],
@@ -50,7 +51,6 @@ def prepare_data_for_firebase(data,pred_datetime,source):
 def firebase_task(data,pred_datetime,source): 
     print("threadtask",data)
     if any(data.values()):
-        print("nullpart",data['locs'])
         ref,json_dic=prepare_data_for_firebase(data,pred_datetime,source)
         
         json_dic=json.dumps({'json_dic':json_dic,'ref':ref})
@@ -161,8 +161,9 @@ def prepare_ref_to_get_firebase_report(source):
     return ref
 # function to fech all the data of a specified day from firebase db
 def get_report_request_from_firebase(source=0):
-    firebase_thread.join()
-    
+    if firebase_thread.is_alive():
+        firebase_thread.join()
+    sleep(2)
     try:
         
         ref=prepare_ref_to_get_firebase_report(source)

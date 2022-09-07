@@ -14,7 +14,39 @@ from threading import Event
 
 app = Flask('app')
 q=queue.Queue()
+q_ref=queue.Queue()
+global stop_threads
+def stop_threads_fun():
+    stop_threads=True   
+    return stop_threads
+def q_thread_task():
+    while True:
+        
+        if not q.empty():
+            print("inter thread2")
+            try:
+              conn=FirebaseDataBase()
+              if conn:
+                print("q_ref","q")
+                data=q.get()
+                ref=q_ref.get()
+                conn.insert_data(ref=ref,data=data)  
+                print("insert queued data successfully")
+                conn.close_connection()
+                if q.empty():
+                    print("out of thread")
+                    break
+            except:
+              print("queue thread is on")
+              continue
+        elif stop_threads:
+            break
+        if stop_threads:
+            break
 
+           
+        
+            
 class FirebaseDataBase:
     def __init__(self):
         self.conn=self.connect_to_database('https://face-mask-detection-2778f-default-rtdb.firebaseio.com/')
@@ -33,9 +65,16 @@ class FirebaseDataBase:
         try:
                 
             root = db.reference(ref["master"]+ref["year"]+ref["month"]+ref["day"]+ref["hour"]+ref["minute"]+ref["second"])
-            res=root.set(data)
-            return res
+            root.set(data)
+            print("insert root res")
+            return "successfully inserted"
         except:
+            
+            q.put(data)
+            print(q)
+            q_ref.put(ref)
+            print(q_ref)
+            #q_thread.start()
             return "checking internet connection..."
 #get all data from firebase db
     def get_data(self, ref):
@@ -46,9 +85,10 @@ class FirebaseDataBase:
             except:
                 return "checking internet connection..."
 #retreive the data of specific day 
-    def get_data_by_Date(self, ref):    
+    def get_data_by_Date(self, ref): 
             
             root = db.reference(ref["master"]+ref["year"]+ref["month"]+ref["day"])
+            print(root)
             try:
                 data=root.get()
                 print("data in firebase", data)
@@ -90,6 +130,10 @@ def Get_Data():
 #get Data for a specified Date rout   
 @app.route('/GetbyDate',methods=['GET'])           
 def GetbyDate():
+    
+    q_thread.join()
+    stop_threads_fun()
+    q_thread.join()
     print("GetbyDate")
     conn=FirebaseDataBase()
     
@@ -120,28 +164,33 @@ def InsertData():
             print('ref',request.json['ref'])
             data=request.json['json_dic']
             print("firebasepart",data)
-            while not q.empty():
-                queued_data=json.dumps(q.get())
-                res=conn.insert_data(ref,queued_data) 
-
-            res=conn.insert_data(ref,data) 
-            print( "successfully inserted")
+            #while not q.empty():
+                #queued_data=json.dumps(q.get())
+            #    res=conn.insert_data(q_ref,q) 
+                
+            conn.insert_data(ref,data) 
+            print("successfully inserted")
             conn.close_connection()
-            return "successfully inserted"       
+            res= "successfully inserted"       
         except:
-            q.put(ref,data)
-            print("checking internet connection...") 
+           
+            res="checking internet connection..."
             
         return res
-     
+
+
+
 
 if __name__ == '__main__':
     try:
+        stop_threads=False
+        q_thread= Thread(target=q_thread_task,args=())
+        q_thread.start()
+        
         app.run(debug=True, host='0.0.0.0', port=5001)
         data=dict
         ref=""
         event = Event()
-
+        
     except:
         print("checking server connection...")
-        

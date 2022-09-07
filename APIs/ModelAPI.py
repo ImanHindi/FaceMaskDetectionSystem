@@ -34,11 +34,13 @@ def predict_mask():
 
     locs, preds,preds_actual = FaceMaskDetector.FaceMaskDetector.detect_and_predict_mask(img_arr)
     #return the mask detection results as a dictionary
+    
     result = {
         'locs': locs,
         'preds': preds,
         'preds_actual':preds_actual
     }
+    
     return result
 
 
